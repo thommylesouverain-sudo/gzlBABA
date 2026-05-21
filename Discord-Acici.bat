@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 title Discord Erisim Araci
 color 0B
@@ -87,7 +87,7 @@ exit /b
 
 :MENU
 cls
-set "CURRENT_MOD=Standart Mod (Turk Telekom, TurkNet vb.)"
+set "CURRENT_MOD=Superonline Ozel Mod (Zapret)"
 if exist "%ProgramData%\DiscordAcici\active-preset.txt" (
     set /p CURRENT_MOD=<"%ProgramData%\DiscordAcici\active-preset.txt"
 )
@@ -96,7 +96,7 @@ echo  ==========================================================
 echo                    DISCORD ERISIM ARACI
 echo  ==========================================================
 echo.
-echo   Hosts dosyasi + GoodbyeDPI servisi
+echo   Hosts dosyasi + Zapret (winws) servisi
 echo   (sadece Discord trafigine etki eder)
 echo.
 echo   Internet hizina ve oyun pingine HICBIR etkisi yoktur.
@@ -157,7 +157,7 @@ $UpdateUrl = 'https://raw.githubusercontent.com/thommylesouverain-sudo/gzlBABA/m
 $hostsPath   = "$env:WINDIR\System32\drivers\etc\hosts"
 $marker      = '# === DISCORD-ACICI-START ==='
 $endMarker   = '# === DISCORD-ACICI-END ==='
-$serviceName = 'GoodbyeDPI'
+$serviceName = 'DiscordAciciZapret'
 $installDir  = "$env:ProgramData\DiscordAcici"
 $blacklistPath = Join-Path $installDir 'discord-blacklist.txt'
 
@@ -213,7 +213,6 @@ function Test-Latency {
     } catch {}
     try {
         $sw = [System.Diagnostics.Stopwatch]::StartNew()
-        # TLS 1.2'yi aktif et ve SSL sertifika hatalarini yoksay (Hosts yonlendirmesi sebebiyle cert mismatch olacaktir)
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         [Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
         
@@ -227,7 +226,6 @@ function Test-Latency {
         $results.DiscordMs = $sw.ElapsedMilliseconds
         $results.DiscordOk = $true
     } catch {
-        # Eger hata sertifika hatasiysa, bu aslinda baglantinin kuruldugunu ve SNI engelinin asildigini gosterir!
         if ($_.Exception -and $_.Exception.InnerException -and $_.Exception.InnerException.Message -match "sertifika|certificate") {
             $results.DiscordMs = 100
             $results.DiscordOk = $true
@@ -236,103 +234,6 @@ function Test-Latency {
         }
     }
     return $results
-}
-
-function Test-Internet {
-    try {
-        $tcp = New-Object System.Net.Sockets.TcpClient
-        $ar = $tcp.BeginConnect('1.1.1.1', 443, $null, $null)
-        $wh = $ar.AsyncWaitHandle
-        if (-not $wh.WaitOne(3000, $false)) {
-            $tcp.Close()
-            return $false
-        }
-        $tcp.EndConnect($ar)
-        $tcp.Close()
-        return $true
-    } catch {
-        return $false
-    }
-}
-
-function Find-BestPreset {
-    Write-Host '  [Auto-Detect] En uygun baglanti modu araniyor...' -ForegroundColor Cyan
-    
-    if (-not (Test-Internet)) {
-        Write-Host '   [UYARI] Internet baglantisi algilanamadi. Varsayilan mod kuruluyor.' -ForegroundColor Yellow
-        return [PSCustomObject]@{
-            PresetName = 'Standart Mod'
-            Params = '-5 --set-ttl 5 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253'
-        }
-    }
-    
-    $presets = @(
-        @{ Name = 'Standart Mod'; Params = '-5 --set-ttl 5 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253' },
-        @{ Name = 'Superonline Yontem A (Alt 4)'; Params = '-5 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253' },
-        @{ Name = 'Superonline Yontem B (Alt 3)'; Params = '--set-ttl 3 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253' },
-        @{ Name = 'Superonline Yontem C (Alt 5)'; Params = '-9 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253' }
-    )
-    
-    $arch = if ([Environment]::Is64BitOperatingSystem) { 'x86_64' } else { 'x86' }
-    $exePath = Join-Path $installDir "$arch\goodbyedpi.exe"
-    
-    foreach ($p in $presets) {
-        Write-Host "               Deneniyor: $($p.Name)..." -ForegroundColor Gray
-        
-        $existing = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
-        if ($existing) {
-            Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
-            & sc.exe delete $serviceName 2>$null | Out-Null
-        }
-        Get-Process -Name 'goodbyedpi*' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 800
-        
-        $binPath = '"' + $exePath + '" ' + $p.Params + ' --blacklist "' + $blacklistPath + '"'
-        
-        try {
-            New-Service -Name $serviceName `
-                        -BinaryPathName $binPath `
-                        -StartupType Automatic `
-                        -DisplayName 'GoodbyeDPI' `
-                        -Description 'Discord DPI bypass servisi' `
-                        -ErrorAction Stop | Out-Null
-            Start-Service -Name $serviceName -ErrorAction Stop
-            
-            & ipconfig /flushdns | Out-Null
-            Start-Sleep -Seconds 3
-            
-            $test = Test-Latency
-            if ($test.DiscordOk) {
-                Write-Host "               [OK] Calisan mod bulundu: $($p.Name)!" -ForegroundColor Green
-                return [PSCustomObject]@{
-                    PresetName = $p.Name
-                    Params = $p.Params
-                }
-            }
-        } catch {}
-    }
-    
-    Write-Host '               [UYARI] Calisan mod bulunamadi. Standart Mod seciliyor.' -ForegroundColor Yellow
-    return [PSCustomObject]@{
-        PresetName = 'Standart Mod'
-        Params = '-5 --set-ttl 5 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253'
-    }
-}
-
-function Show-LatencyReport {
-    param($Label, $Results)
-    Write-Host ''
-    Write-Host "  [$Label]" -ForegroundColor Yellow
-    if ($Results.InternetMs -ge 0) {
-        Write-Host "   Internet gecikme : $($Results.InternetMs) ms" -ForegroundColor Green
-    } else {
-        Write-Host '   Internet gecikme : Olculemedi' -ForegroundColor Red
-    }
-    if ($Results.DiscordOk) {
-        Write-Host "   Discord baglanti : Erisiliyor ($($Results.DiscordMs) ms)" -ForegroundColor Green
-    } else {
-        Write-Host '   Discord baglanti : Erisilemedi' -ForegroundColor Red
-    }
 }
 
 function Repair-Services {
@@ -517,36 +418,45 @@ function Update-HostsFile {
 
 # ==================== DPI BYPASS ====================
 
-function Find-LocalGoodbyeDPI {
+function Find-LocalZapret {
     $candidates = @()
     if ($BatDir -and (Test-Path $BatDir)) {
         $candidates += $BatDir
-        Get-ChildItem -Path $BatDir -Directory -Filter 'goodbyedpi-*' -ErrorAction SilentlyContinue | ForEach-Object { $candidates += $_.FullName }
+        $candidates += Join-Path $BatDir 'Discord-Zapret-Bypass'
     }
     $userDirs = @("$env:USERPROFILE\Pictures","$env:USERPROFILE\Downloads","$env:USERPROFILE\Desktop","$env:USERPROFILE\Documents")
     foreach ($d in $userDirs) {
         if (Test-Path $d) {
-            Get-ChildItem -Path $d -Directory -Filter 'goodbyedpi-*' -ErrorAction SilentlyContinue | ForEach-Object { $candidates += $_.FullName }
+            Get-ChildItem -Path $d -Directory -Filter '*zapret*' -ErrorAction SilentlyContinue | ForEach-Object { $candidates += $_.FullName }
         }
     }
     foreach ($p in $candidates) {
-        if (Test-Path (Join-Path $p 'x86_64\goodbyedpi.exe')) { return $p }
+        if (Test-Path (Join-Path $p 'winws.exe')) { return $p }
     }
     return $null
 }
 
 function Install-DpiBypass {
     Write-Host ''
-    Write-Host '  [DPI Bypass] GoodbyeDPI kuruluyor...' -ForegroundColor Cyan
+    Write-Host '  [DPI Bypass] Zapret (winws) kuruluyor...' -ForegroundColor Cyan
 
-    # Servis, process ve WinDivert driver'ini durdur (dosya kilidi icin)
+    # Eski GoodbyeDPI servisini temizle
+    $oldGdpi = Get-Service -Name 'GoodbyeDPI' -ErrorAction SilentlyContinue
+    if ($oldGdpi) {
+        Write-Host '               Eski GoodbyeDPI servisi durduruluyor...' -ForegroundColor Cyan
+        Stop-Service -Name 'GoodbyeDPI' -Force -ErrorAction SilentlyContinue
+        & sc.exe delete 'GoodbyeDPI' 2>$null | Out-Null
+    }
+
+    # Eski winws servisini temizle
     $existing = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
     if ($existing) {
-        Write-Host '               Mevcut servis durduruluyor...' -ForegroundColor Cyan
+        Write-Host '               Mevcut Zapret servisi durduruluyor...' -ForegroundColor Cyan
         Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 1
         & sc.exe delete $serviceName 2>$null | Out-Null
     }
+    Get-Process -Name 'winws*' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     Get-Process -Name 'goodbyedpi*' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     & sc.exe stop WinDivert 2>$null | Out-Null
     & sc.exe delete WinDivert 2>$null | Out-Null
@@ -558,64 +468,64 @@ function Install-DpiBypass {
         New-Item -Path $installDir -ItemType Directory -Force | Out-Null
     }
 
-    $arch = if ([Environment]::Is64BitOperatingSystem) { 'x86_64' } else { 'x86' }
-    $exePath = Join-Path $installDir "$arch\goodbyedpi.exe"
+    $exePath = Join-Path $installDir 'winws.exe'
 
     if (-not (Test-Path $exePath)) {
-        $localSrc = Find-LocalGoodbyeDPI
+        $localSrc = Find-LocalZapret
         if ($localSrc) {
             Write-Host "               Yerel kopya: $localSrc" -ForegroundColor Gray
             try {
-                Copy-Item -Path (Join-Path $localSrc '*') -Destination $installDir -Recurse -Force -ErrorAction Stop
+                Copy-Item -Path (Join-Path $localSrc 'winws.exe') $installDir -Force -ErrorAction Stop
+                Copy-Item -Path (Join-Path $localSrc 'cygwin1.dll') $installDir -Force -ErrorAction Stop
+                Copy-Item -Path (Join-Path $localSrc 'WinDivert.dll') $installDir -Force -ErrorAction Stop
+                Copy-Item -Path (Join-Path $localSrc 'WinDivert64.sys') $installDir -Force -ErrorAction Stop
                 Write-Host '               [OK] Kopyalandi' -ForegroundColor Green
             } catch {
                 Write-Host "               [HATA] $($_.Exception.Message)" -ForegroundColor Red
                 return
             }
         } else {
-            Write-Host '               [BILGI] GoodbyeDPI yerelde bulunamadi, indiriliyor...' -ForegroundColor Cyan
+            Write-Host '               [BILGI] Zapret yerelde bulunamadi, indiriliyor...' -ForegroundColor Cyan
             try {
                 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-                $zipUrl = 'https://raw.githubusercontent.com/thommylesouverain-sudo/gzlBABA/main/goodbyedpi-0.2.3rc3-turkey.zip'
-                $tempZip = Join-Path $env:TEMP 'goodbyedpi-turkey.zip'
+                $zipUrl = 'https://raw.githubusercontent.com/thommylesouverain-sudo/gzlBABA/main/zapret-winws.zip'
+                $tempZip = Join-Path $env:TEMP 'zapret-winws.zip'
                 Write-Host '               GitHub''dan indiriliyor...' -ForegroundColor Gray
                 Invoke-WebRequest -Uri $zipUrl -OutFile $tempZip -TimeoutSec 45 -ErrorAction Stop
                 Write-Host '               [OK] Indirildi. Dosyalar aciliyor...' -ForegroundColor Green
                 
-                $tempExtract = Join-Path $env:TEMP 'goodbyedpi-extract'
+                $tempExtract = Join-Path $env:TEMP 'zapret-extract'
                 if (Test-Path $tempExtract) { Remove-Item $tempExtract -Recurse -Force }
                 Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
                 
-                $extractedFolder = Get-ChildItem -Path $tempExtract -Directory | Select-Object -First 1
-                if ($extractedFolder) {
-                    Copy-Item -Path (Join-Path $extractedFolder.FullName '*') -Destination $installDir -Recurse -Force -ErrorAction Stop
-                } else {
-                    Copy-Item -Path (Join-Path $tempExtract '*') -Destination $installDir -Recurse -Force -ErrorAction Stop
-                }
+                Copy-Item -Path (Join-Path $tempExtract '*') -Destination $installDir -Recurse -Force -ErrorAction Stop
                 
                 Remove-Item $tempZip -Force
                 Remove-Item $tempExtract -Recurse -Force
                 Write-Host '               [OK] Kurulum tamamlandi' -ForegroundColor Green
             } catch {
                 Write-Host "               [HATA] Indirme veya acma basarisiz: $($_.Exception.Message)" -ForegroundColor Red
-                Write-Host '               Lutfen BAT dosyasinin yanina goodbyedpi-* klasorunu elle koyun' -ForegroundColor Yellow
+                Write-Host '               Lutfen klasor icindeki Zapret dosyalarini elle koyun' -ForegroundColor Yellow
                 return
             }
         }
     } else {
-        Write-Host '               GoodbyeDPI zaten kurulu' -ForegroundColor Green
+        Write-Host '               Zapret zaten kurulu' -ForegroundColor Green
     }
 
     if (-not (Test-Path $exePath)) {
-        Write-Host '               [HATA] goodbyedpi.exe bulunamadi' -ForegroundColor Red
+        Write-Host '               [HATA] winws.exe bulunamadi' -ForegroundColor Red
         return
     }
 
-    @(
-        'discord.com', 'discordapp.com', 'discord.gg',
-        'discord.media', 'discordapp.net', 'discordstatus.com'
-    ) | Set-Content -Path $blacklistPath -Encoding ASCII
-    Write-Host '               [OK] Blacklist olusturuldu' -ForegroundColor Green
+    $allDoms = @()
+    $allDoms += $cfDomains
+    $allDoms += $gatewayDomains
+    $allDoms += $cdnDomains
+    $allDoms += $dlDomains
+    $allDoms += $gcpDomains
+    $allDoms | Select-Object -Unique | Set-Content -Path $blacklistPath -Encoding ASCII
+    Write-Host '               [OK] Blacklist/Hostlist olusturuldu' -ForegroundColor Green
 
     $presetName = ''
     $params = ''
@@ -631,14 +541,13 @@ function Install-DpiBypass {
         }
         Write-Host "               Kayitli mod yukleniyor: $presetName" -ForegroundColor Green
     } else {
-        $result = Find-BestPreset
-        $presetName = $result.PresetName
-        $params = $result.Params
+        $presetName = 'Superonline Ozel Mod (Zapret)'
+        $params = '--wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig'
         Set-Content -Path $presetPath -Value $presetName -Encoding ASCII
         Set-Content -Path $paramsPath -Value $params -Encoding ASCII
     }
 
-    $binPath = '"' + $exePath + '" ' + $params + ' --blacklist "' + $blacklistPath + '"'
+    $binPath = '"' + $exePath + '" ' + $params + ' --hostlist="' + $blacklistPath + '"'
 
     try {
         $existing = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
@@ -651,20 +560,20 @@ function Install-DpiBypass {
         New-Service -Name $serviceName `
                     -BinaryPathName $binPath `
                     -StartupType Automatic `
-                    -DisplayName 'GoodbyeDPI' `
-                    -Description 'Discord DPI bypass servisi' `
+                    -DisplayName 'DiscordAciciZapret' `
+                    -Description 'Zapret Discord DPI bypass servisi' `
                     -ErrorAction Stop | Out-Null
         Start-Service -Name $serviceName -ErrorAction Stop
         Start-Sleep -Seconds 1
 
         $svc = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
         if ($svc -and $svc.Status -eq 'Running') {
-            Write-Host '               [OK] Servis calisiyor' -ForegroundColor Green
+            Write-Host '               [OK] Zapret Servisi calisiyor' -ForegroundColor Green
         } else {
             Write-Host "               [UYARI] Servis durumu: $($svc.Status)" -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "               [HATA] $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "               [HATA] Servis baslatilamadi: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -831,11 +740,6 @@ function Invoke-Update {
     if (-not $UpdateUrl) {
         Write-Host ''
         Write-Host '   [BILGI] Guncelleme URL''si ayarlanmamis.' -ForegroundColor Yellow
-        Write-Host '   GitHub reposu olusturdugunda UpdateUrl degiskenini ayarla.' -ForegroundColor Gray
-        Write-Host ''
-        Write-Host '   Ornek: GitHub''da repo olustur, BAT dosyasini yukle,' -ForegroundColor Gray
-        Write-Host '   ardindan raw URL''yi scriptteki $UpdateUrl''ye yaz.' -ForegroundColor Gray
-        Write-Host ''
         return
     }
 
@@ -876,70 +780,35 @@ function Invoke-ChangeMode {
     Clear-Host
     Write-Host ''
     Write-Host '  ==========================================================' -ForegroundColor Cyan
-    Write-Host '    MOD / ISS AYARINI DEGISTIR' -ForegroundColor Cyan
+    Write-Host '    ZAPRET BYPASS MODUNU DEGISTIR' -ForegroundColor Cyan
     Write-Host '  ==========================================================' -ForegroundColor Cyan
     Write-Host ''
-    Write-Host '   Turkcell Superonline ve bazi fiber altyapilarda standart ayarlar'
-    Write-Host '   calismayabilir. Buradan farkli baglanti modlarini deneyebilirsiniz.'
+    Write-Host '   Turkcell Superonline kullaniyorsaniz "Superonline Ozel Mod" secilmelidir.'
+    Write-Host '   Turk Telekom veya diger ISS''lerde standart mod yeterli olabilir.'
     Write-Host ''
-    Write-Host '   [1] Otomatik Algila (En uygun calisan modu otomatik bulur)'
+    Write-Host '   [1] Standart Mod (Turk Telekom, TurkNet, Kablonet vb.)'
+    Write-Host '       Parametre: --wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake --dpi-desync-fooling=md5sig'
     Write-Host ''
-    Write-Host '   [2] Standart Mod (Turk Telekom, TurkNet, Kablonet, Millenicom vb. - Varsayilan)'
-    Write-Host '       Parametreler: -5 --set-ttl 5 (Dahili Yandex DNS)'
+    Write-Host '   [2] Superonline Ozel Mod (EN COK CALISAN - Varsayilan)'
+    Write-Host '       Parametre: --wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig'
     Write-Host ''
-    Write-Host '   [3] Superonline - Yontem A (Alternatif 4) - EN COK CALISAN'
-    Write-Host '       Parametreler: -5 (TTL degistirilmez, Dahili Yandex DNS)'
-    Write-Host ''
-    Write-Host '   [4] Superonline - Yontem B (Alternatif 3)'
-    Write-Host '       Parametreler: --set-ttl 3 (Dusuk TTL, Dahili Yandex DNS)'
-    Write-Host ''
-    Write-Host '   [5] Superonline - Yontem C (Alternatif 5)'
-    Write-Host '       Parametreler: -9 (Agresif DPI, Dahili Yandex DNS)'
-    Write-Host ''
-    Write-Host '   [6] Superonline - Yontem D (Alternatif 2)'
-    Write-Host '       Parametreler: -5 (TTL degistirilmez, Yerel/Sistem DNS kullanir)'
-    Write-Host ''
-    Write-Host '   [7] Superonline - Yontem E (Alternatif 6)'
-    Write-Host '       Parametreler: -9 (Agresif DPI, Yerel/Sistem DNS kullanir)'
-    Write-Host ''
-    Write-Host '   [8] Geri Don'
+    Write-Host '   [3] Geri Don'
     Write-Host ''
 
-    $choice = Read-Host '   Seciminiz (1-8)'
-    if ($choice -eq '8' -or [string]::IsNullOrWhiteSpace($choice)) { return }
+    $choice = Read-Host '   Seciminiz (1-3)'
+    if ($choice -eq '3' -or [string]::IsNullOrWhiteSpace($choice)) { return }
 
     $presetName = ''
     $params = ''
 
     switch ($choice) {
         '1' {
-            $result = Find-BestPreset
-            $presetName = $result.PresetName
-            $params = $result.Params
+            $presetName = 'Standart Mod (Zapret)'
+            $params = '--wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake --dpi-desync-fooling=md5sig'
         }
         '2' {
-            $presetName = 'Standart Mod'
-            $params = '-5 --set-ttl 5 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253'
-        }
-        '3' {
-            $presetName = 'Superonline Yontem A (Alt 4)'
-            $params = '-5 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253'
-        }
-        '4' {
-            $presetName = 'Superonline Yontem B (Alt 3)'
-            $params = '--set-ttl 3 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253'
-        }
-        '5' {
-            $presetName = 'Superonline Yontem C (Alt 5)'
-            $params = '-9 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253'
-        }
-        '6' {
-            $presetName = 'Superonline Yontem D (Alt 2)'
-            $params = '-5'
-        }
-        '7' {
-            $presetName = 'Superonline Yontem E (Alt 6)'
-            $params = '-9'
+            $presetName = 'Superonline Ozel Mod (Zapret)'
+            $params = '--wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig'
         }
         default {
             Write-Host '   Gecersiz secim!' -ForegroundColor Red
@@ -965,16 +834,15 @@ function Invoke-ChangeMode {
         Start-Sleep -Seconds 1
         & sc.exe delete $serviceName 2>$null | Out-Null
 
-        $arch = if ([Environment]::Is64BitOperatingSystem) { 'x86_64' } else { 'x86' }
-        $exePath = Join-Path $installDir "$arch\goodbyedpi.exe"
-        $binPath = '"' + $exePath + '" ' + $params + ' --blacklist "' + $blacklistPath + '"'
+        $exePath = Join-Path $installDir 'winws.exe'
+        $binPath = '"' + $exePath + '" ' + $params + ' --hostlist="' + $blacklistPath + '"'
 
         try {
             New-Service -Name $serviceName `
                         -BinaryPathName $binPath `
                         -StartupType Automatic `
-                        -DisplayName 'GoodbyeDPI' `
-                        -Description 'Discord DPI bypass servisi' `
+                        -DisplayName 'DiscordAciciZapret' `
+                        -Description 'Zapret Discord DPI bypass servisi' `
                         -ErrorAction Stop | Out-Null
             Start-Service -Name $serviceName -ErrorAction Stop
             Write-Host '   [OK] Servis yeni mod ile baslatildi.' -ForegroundColor Green
@@ -991,14 +859,13 @@ function Invoke-ChangeMode {
     Start-Sleep -Seconds 2
 }
 
-
 # ==================== ANA AKSIYONLAR ====================
 
 function Invoke-Open {
     param([bool]$RestartDiscord = $true)
     Write-Host ''
     Write-Host '  ==========================================================' -ForegroundColor Cyan
-    Write-Host '    DISCORD ERISIM ARACI - KURULUM' -ForegroundColor Cyan
+    Write-Host '    DISCORD ERISIM ARACI (ZAPRET MODU) - KURULUM' -ForegroundColor Cyan
     Write-Host '  ==========================================================' -ForegroundColor Cyan
     Write-Host ''
 
@@ -1080,16 +947,32 @@ function Invoke-Restore {
         Write-Host '   [OK] Hosts temizlendi' -ForegroundColor Green
     }
 
+    # Eski GoodbyeDPI servisini temizle
+    $oldGdpi = Get-Service -Name 'GoodbyeDPI' -ErrorAction SilentlyContinue
+    if ($oldGdpi) {
+        Stop-Service -Name 'GoodbyeDPI' -Force -ErrorAction SilentlyContinue
+        & sc.exe delete 'GoodbyeDPI' | Out-Null
+    }
+
+    # Zapret servisini temizle
     $svc = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
     if ($svc) {
         Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
         & sc.exe delete $serviceName | Out-Null
-        Write-Host '   [OK] DPI bypass servisi kaldirildi' -ForegroundColor Green
+        Write-Host '   [OK] Zapret DPI bypass servisi kaldirildi' -ForegroundColor Green
     }
+
+    Get-Process -Name 'winws*' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process -Name 'goodbyedpi*' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
+    & sc.exe stop WinDivert 2>$null | Out-Null
+    & sc.exe delete WinDivert 2>$null | Out-Null
+    & sc.exe stop WinDivert64 2>$null | Out-Null
+    & sc.exe delete WinDivert64 2>$null | Out-Null
 
     if (Test-Path $installDir) {
         Remove-Item $installDir -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Host '   [OK] GoodbyeDPI dosyalari silindi' -ForegroundColor Green
+        Write-Host '   [OK] Dosyalar silindi' -ForegroundColor Green
     }
 
     foreach ($cmd in @("$env:WINDIR\site.bat", "$env:WINDIR\gzlbaba.bat")) {
