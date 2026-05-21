@@ -520,9 +520,34 @@ function Install-DpiBypass {
                 return
             }
         } else {
-            Write-Host '               [HATA] GoodbyeDPI bulunamadi.' -ForegroundColor Red
-            Write-Host '               BAT dosyasinin yanina goodbyedpi-* klasorunu koyun' -ForegroundColor Yellow
-            return
+            Write-Host '               [BILGI] GoodbyeDPI yerelde bulunamadi, indiriliyor...' -ForegroundColor Cyan
+            try {
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                $zipUrl = 'https://raw.githubusercontent.com/thommylesouverain-sudo/gzlBABA/main/goodbyedpi-0.2.3rc3-turkey.zip'
+                $tempZip = Join-Path $env:TEMP 'goodbyedpi-turkey.zip'
+                Write-Host '               GitHub''dan indiriliyor...' -ForegroundColor Gray
+                Invoke-WebRequest -Uri $zipUrl -OutFile $tempZip -TimeoutSec 45 -ErrorAction Stop
+                Write-Host '               [OK] Indirildi. Dosyalar aciliyor...' -ForegroundColor Green
+                
+                $tempExtract = Join-Path $env:TEMP 'goodbyedpi-extract'
+                if (Test-Path $tempExtract) { Remove-Item $tempExtract -Recurse -Force }
+                Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+                
+                $extractedFolder = Get-ChildItem -Path $tempExtract -Directory | Select-Object -First 1
+                if ($extractedFolder) {
+                    Copy-Item -Path (Join-Path $extractedFolder.FullName '*') -Destination $installDir -Recurse -Force -ErrorAction Stop
+                } else {
+                    Copy-Item -Path (Join-Path $tempExtract '*') -Destination $installDir -Recurse -Force -ErrorAction Stop
+                }
+                
+                Remove-Item $tempZip -Force
+                Remove-Item $tempExtract -Recurse -Force
+                Write-Host '               [OK] Kurulum tamamlandi' -ForegroundColor Green
+            } catch {
+                Write-Host "               [HATA] Indirme veya acma basarisiz: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host '               Lutfen BAT dosyasinin yanina goodbyedpi-* klasorunu elle koyun' -ForegroundColor Yellow
+                return
+            }
         }
     } else {
         Write-Host '               GoodbyeDPI zaten kurulu' -ForegroundColor Green
