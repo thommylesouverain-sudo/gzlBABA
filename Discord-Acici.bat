@@ -151,7 +151,7 @@ param(
 $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 
-$ScriptVersion = '1.0.0'
+$ScriptVersion = '1.0.1'
 $UpdateUrl = 'https://raw.githubusercontent.com/thommylesouverain-sudo/gzlBABA/main/Discord-Acici.bat'
 
 $hostsPath   = "$env:WINDIR\System32\drivers\etc\hosts"
