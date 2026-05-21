@@ -151,7 +151,7 @@ param(
 $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 
-$ScriptVersion = '1.0.1'
+$ScriptVersion = '1.0.2'
 $UpdateUrl = 'https://raw.githubusercontent.com/thommylesouverain-sudo/gzlBABA/main/Discord-Acici.bat'
 
 $hostsPath   = "$env:WINDIR\System32\drivers\etc\hosts"
@@ -330,6 +330,37 @@ function Show-LatencyReport {
     }
 }
 
+function Repair-Services {
+    Write-Host '  [Servis Kontrolu] Kritik Windows servisleri kontrol ediliyor...' -ForegroundColor Cyan
+    $services = @(
+        @{ Name = 'Audiosrv'; StartType = 'Automatic'; DisplayName = 'Windows Ses' },
+        @{ Name = 'qwave'; StartType = 'Manual'; DisplayName = 'Quality Windows Audio Video Experience (qwave)' },
+        @{ Name = 'BFE'; StartType = 'Automatic'; DisplayName = 'Temel Filtreleme Altyapisi (Base Filtering Engine)' }
+    )
+    foreach ($s in $services) {
+        $svc = Get-Service -Name $s.Name -ErrorAction SilentlyContinue
+        if ($svc) {
+            $isStopped = $svc.Status -ne 'Running'
+            $isDisabled = $svc.StartType -eq 'Disabled'
+            if ($isStopped -or $isDisabled) {
+                Write-Host "               Servis baslatiliyor: $($s.DisplayName)..." -ForegroundColor Yellow
+                try {
+                    if ($isDisabled) {
+                        Set-Service -Name $s.Name -StartupType $s.StartType -ErrorAction Stop
+                    }
+                    Start-Service -Name $s.Name -ErrorAction Stop
+                    Write-Host "               [OK] $($s.DisplayName) aktif edildi ve baslatildi." -ForegroundColor Green
+                } catch {
+                    Write-Host "               [UYARI] $($s.DisplayName) baslatilamadi: $($_.Exception.Message)" -ForegroundColor Red
+                }
+            } else {
+                Write-Host "               [OK] $($s.DisplayName) calisiyor." -ForegroundColor Gray
+            }
+        } else {
+            Write-Host "               [UYARI] $($s.Name) servisi bulunamadi!" -ForegroundColor Red
+        }
+    }
+}
 
 function Show-WinNotification {
     param([string]$Title, [string]$Message)
@@ -953,6 +984,8 @@ function Invoke-Open {
     Write-Host '    DISCORD ERISIM ARACI - KURULUM' -ForegroundColor Cyan
     Write-Host '  ==========================================================' -ForegroundColor Cyan
     Write-Host ''
+
+    Repair-Services
 
     Write-Host '  [BAGLANTI TESTI - ONCE]' -ForegroundColor Yellow
     $before = Test-Latency
