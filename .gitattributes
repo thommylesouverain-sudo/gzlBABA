@@ -1,0 +1,8 @@
+# Force Windows line endings for batch and command scripts so they run correctly when downloaded from GitHub
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.zip binary
+*.rar binary
+*.exe binary
+*.dll binary
+*.sys binary
