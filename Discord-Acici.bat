@@ -1,93 +1,92 @@
-﻿@echo off
-chcp 65001 >nul
-title Discord Erisim Araci
-color 0B
-
-set "SCRIPT=%~f0"
-set "BATDIR=%~dp0"
-if "%BATDIR:~-1%"=="\" set "BATDIR=%BATDIR:~0,-1%"
-
-net session >nul 2>&1
-if %errorLevel% equ 0 goto IS_ADMIN
-
-echo.
-echo  Yonetici izni gerekiyor, yeniden baslatiliyor...
-set "PSARGS="
-:BUILD_ARGS
-set "A=%~1"
-if "%A%"=="" goto DO_ELEVATE
-if defined PSARGS (set "PSARGS=%PSARGS%,'%A%'") else (set "PSARGS='%A%'")
-shift /1
-goto BUILD_ARGS
-:DO_ELEVATE
-if defined PSARGS (
-    powershell -NoProfile -Command "Start-Process -FilePath '%SCRIPT%' -ArgumentList %PSARGS% -Verb RunAs"
-) else (
-    powershell -NoProfile -Command "Start-Process -FilePath '%SCRIPT%' -Verb RunAs"
-)
+@echo off
+chcp 65001 >nul
+title Discord Erisim Araci
+color 0B
+
+set "SCRIPT=%~f0"
+set "BATDIR=%~dp0"
+if "%BATDIR:~-1%"=="\" set "BATDIR=%BATDIR:~0,-1%"
+
+net session >nul 2>&1
+if %errorLevel% equ 0 goto IS_ADMIN
+
+echo.
+echo  Yonetici izni gerekiyor, yeniden baslatiliyor...
+set "PSARGS="
+:BUILD_ARGS
+set "A=%~1"
+if "%A%"=="" goto DO_ELEVATE
+if defined PSARGS (set "PSARGS=%PSARGS%,'%A%'") else (set "PSARGS='%A%'")
+shift /1
+goto BUILD_ARGS
+:DO_ELEVATE
+if defined PSARGS (
+    powershell -NoProfile -Command "Start-Process -FilePath '%SCRIPT%' -ArgumentList %PSARGS% -Verb RunAs"
+) else (
+    powershell -NoProfile -Command "Start-Process -FilePath '%SCRIPT%' -Verb RunAs"
+)
+exit /b
+
+:IS_ADMIN
+set "SCRIPTNAME=%~n0"
+
+if /i "%SCRIPTNAME%"=="site" if "%~1"=="" goto DO_SITE_USAGE
+if /i "%SCRIPTNAME%"=="gzlbaba" if "%~1"=="" goto MENU
+if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="reset" goto DO_RESET
+if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="sifirla" goto DO_RESET
+if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="ac" call :RUN_PS Open "" & pause & exit /b
+if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="durum" call :RUN_PS Status "" & pause & exit /b
+if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="status" call :RUN_PS Status "" & pause & exit /b
+if /i "%~1"=="ac"     goto SITE_CMD
+if /i "%~1"=="aç"     goto SITE_CMD
+if /i "%~1"=="add"    goto SITE_CMD
+if /i "%~1"=="ekle"   goto SITE_CMD
+if /i "%~1"=="kapat"  goto SITE_CMD
+if /i "%~1"=="remove" goto SITE_CMD
+if /i "%~1"=="sil"    goto SITE_CMD
+if /i "%~1"=="liste"  goto SITE_CMD
+if /i "%~1"=="list"   goto SITE_CMD
+if /i "%~1"=="sifirla" goto DO_RESET
+if /i "%~1"=="reset"   goto DO_RESET
+goto MENU
+
+:DO_RESET
+call :RUN_PS Restore ""
+pause
+exit /b
+
+:DO_SITE_USAGE
+call :RUN_PS SiteUsage ""
+pause
+exit /b
+
+:SITE_CMD
+set "SITECMD=%~1"
+shift /1
+set "DOMAINS="
+:COLLECT
+set "D=%~1"
+if "%D%"=="" goto ROUTE_SITE
+if defined DOMAINS (set "DOMAINS=%DOMAINS% %D%") else (set "DOMAINS=%D%")
+shift /1
+goto COLLECT
+:ROUTE_SITE
+set "ACTION=SiteList"
+if /i "%SITECMD%"=="ac"     set "ACTION=SiteAdd"
+if /i "%SITECMD%"=="aç"     set "ACTION=SiteAdd"
+if /i "%SITECMD%"=="add"    set "ACTION=SiteAdd"
+if /i "%SITECMD%"=="ekle"   set "ACTION=SiteAdd"
+if /i "%SITECMD%"=="kapat"  set "ACTION=SiteRemove"
+if /i "%SITECMD%"=="remove" set "ACTION=SiteRemove"
+if /i "%SITECMD%"=="sil"    set "ACTION=SiteRemove"
+if /i "%SITECMD%"=="liste"  set "ACTION=SiteList"
+if /i "%SITECMD%"=="list"   set "ACTION=SiteList"
+call :RUN_PS %ACTION% "%DOMAINS%"
+pause
 exit /b
-
-:IS_ADMIN
-set "SCRIPTNAME=%~n0"
-
-if /i "%SCRIPTNAME%"=="site" if "%~1"=="" goto DO_SITE_USAGE
-if /i "%SCRIPTNAME%"=="gzlbaba" if "%~1"=="" goto MENU
-if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="reset" goto DO_RESET
-if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="sifirla" goto DO_RESET
-if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="ac" call :RUN_PS Open "" & pause & exit /b
-if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="durum" call :RUN_PS Status "" & pause & exit /b
-if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="status" call :RUN_PS Status "" & pause & exit /b
-if /i "%~1"=="ac"     goto SITE_CMD
-if /i "%~1"=="aç"     goto SITE_CMD
-if /i "%~1"=="add"    goto SITE_CMD
-if /i "%~1"=="ekle"   goto SITE_CMD
-if /i "%~1"=="kapat"  goto SITE_CMD
-if /i "%~1"=="remove" goto SITE_CMD
-if /i "%~1"=="sil"    goto SITE_CMD
-if /i "%~1"=="liste"  goto SITE_CMD
-if /i "%~1"=="list"   goto SITE_CMD
-if /i "%~1"=="sifirla" goto DO_RESET
-if /i "%~1"=="reset"   goto DO_RESET
-goto MENU
-
-:DO_RESET
-call :RUN_PS Restore ""
-pause
-exit /b
-
-:DO_SITE_USAGE
-call :RUN_PS SiteUsage ""
-pause
-exit /b
-
-:SITE_CMD
-set "SITECMD=%~1"
-shift /1
-set "DOMAINS="
-:COLLECT
-set "D=%~1"
-if "%D%"=="" goto ROUTE_SITE
-if defined DOMAINS (set "DOMAINS=%DOMAINS% %D%") else (set "DOMAINS=%D%")
-shift /1
-goto COLLECT
-:ROUTE_SITE
-set "ACTION=SiteList"
-if /i "%SITECMD%"=="ac"     set "ACTION=SiteAdd"
-if /i "%SITECMD%"=="aç"     set "ACTION=SiteAdd"
-if /i "%SITECMD%"=="add"    set "ACTION=SiteAdd"
-if /i "%SITECMD%"=="ekle"   set "ACTION=SiteAdd"
-if /i "%SITECMD%"=="kapat"  set "ACTION=SiteRemove"
-if /i "%SITECMD%"=="remove" set "ACTION=SiteRemove"
-if /i "%SITECMD%"=="sil"    set "ACTION=SiteRemove"
-if /i "%SITECMD%"=="liste"  set "ACTION=SiteList"
-if /i "%SITECMD%"=="list"   set "ACTION=SiteList"
-call :RUN_PS %ACTION% "%DOMAINS%"
-pause
-exit /b
-
 :MENU
 cls
-set "CURRENT_MOD=Superonline Ozel Mod (Zapret)"
+set "CURRENT_MOD=Standart Mod (Zapret)"
 if exist "%ProgramData%\DiscordAcici\active-preset.txt" (
     set /p CURRENT_MOD=<"%ProgramData%\DiscordAcici\active-preset.txt"
 )
@@ -151,7 +150,7 @@ param(
 $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 
-$ScriptVersion = '1.0.4'
+$ScriptVersion = '1.0.5'
 $UpdateUrl = 'https://raw.githubusercontent.com/thommylesouverain-sudo/gzlBABA/main/Discord-Acici.bat'
 
 $hostsPath   = "$env:WINDIR\System32\drivers\etc\hosts"
@@ -353,6 +352,16 @@ function Set-SystemDns {
     }
 }
 
+# DNS-test to verify internet
+function Test-Internet {
+    try {
+        $ping = Test-Connection -ComputerName '1.1.1.1' -Count 1 -ErrorAction Stop -TimeoutSec 2
+        return $true
+    } catch {
+        return $false
+    }
+}
+
 function Reset-SystemDns {
     Write-Host '  [DNS] Otomatige donduruluyor...' -ForegroundColor Cyan
     try {
@@ -434,6 +443,90 @@ function Find-LocalZapret {
         if (Test-Path (Join-Path $p 'winws.exe')) { return $p }
     }
     return $null
+}
+
+function Find-BestPreset {
+    Write-Host '  [Otomatik Algilama] En uygun baglanti modu araniyor...' -ForegroundColor Cyan
+    Write-Host '                      Bu islem biraz zaman alabilir...' -ForegroundColor Gray
+
+    $parameterSets = @(
+        @{ Name = 'Standart Mod (Zapret)'; Params = '--wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake --dpi-desync-fooling=md5sig' },
+        @{ Name = 'Superonline Ozel Mod (Zapret)'; Params = '--wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig' }
+    )
+
+    $workingSet = $null
+    $exePath = Join-Path $installDir 'winws.exe'
+
+    foreach ($set in $parameterSets) {
+        Write-Host "                      Deneniyor: $($set.Name)..." -ForegroundColor Gray
+        
+        # Onceki winws sureclerini durdur
+        Get-Process -Name 'winws*' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        & sc.exe stop WinDivert 2>$null | Out-Null
+        & sc.exe delete WinDivert 2>$null | Out-Null
+        & sc.exe stop WinDivert64 2>$null | Out-Null
+        & sc.exe delete WinDivert64 2>$null | Out-Null
+        Start-Sleep -Milliseconds 500
+
+        # winws.exe baslat
+        $fullArgs = "$($set.Params) --hostlist=""$blacklistPath"""
+        
+        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+        $pinfo.FileName = $exePath
+        $pinfo.Arguments = $fullArgs
+        $pinfo.UseShellExecute = $false
+        $pinfo.RedirectStandardOutput = $true
+        $pinfo.RedirectStandardError = $true
+        $pinfo.CreateNoWindow = $true
+
+        $process = New-Object System.Diagnostics.Process
+        $process.StartInfo = $pinfo
+
+        try {
+            $process.Start() | Out-Null
+            Start-Sleep -Seconds 2 # Zapret'in baslamasi icin bekle
+
+            if (-not $process.HasExited) {
+                # DNS onbellegini temizle
+                & ipconfig /flushdns | Out-Null
+
+                # Baglanti testi
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                [Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+                
+                $req = [System.Net.HttpWebRequest]::Create('https://discord.com')
+                $req.Timeout = 3000
+                $req.Method = 'HEAD'
+                $resp = $req.GetResponse()
+                $resp.Close()
+
+                Write-Host "                      [OK] Calisan baglanti bulundu: $($set.Name)" -ForegroundColor Green
+                $workingSet = $set
+                $process.Kill()
+                break
+            }
+        } catch {
+            # Hata durumunda gec
+        } finally {
+            if ($process -and -not $process.HasExited) {
+                $process.Kill()
+            }
+        }
+    }
+
+    # Onceki surecleri durdur
+    Get-Process -Name 'winws*' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    & sc.exe stop WinDivert 2>$null | Out-Null
+    & sc.exe delete WinDivert 2>$null | Out-Null
+    & sc.exe stop WinDivert64 2>$null | Out-Null
+    & sc.exe delete WinDivert64 2>$null | Out-Null
+
+    if ($workingSet) {
+        return $workingSet
+    } else {
+        Write-Host '                      [UYARI] Calisan mod bulunamadi, Standart Mod varsayilan yapiliyor.' -ForegroundColor Yellow
+        return $parameterSets[0]
+    }
 }
 
 function Install-DpiBypass {
@@ -541,8 +634,9 @@ function Install-DpiBypass {
         }
         Write-Host "               Kayitli mod yukleniyor: $presetName" -ForegroundColor Green
     } else {
-        $presetName = 'Superonline Ozel Mod (Zapret)'
-        $params = '--wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig'
+        $best = Find-BestPreset
+        $presetName = $best.Name
+        $params = $best.Params
         Set-Content -Path $presetPath -Value $presetName -Encoding ASCII
         Set-Content -Path $paramsPath -Value $params -Encoding ASCII
     }
@@ -783,20 +877,21 @@ function Invoke-ChangeMode {
     Write-Host '    ZAPRET BYPASS MODUNU DEGISTIR' -ForegroundColor Cyan
     Write-Host '  ==========================================================' -ForegroundColor Cyan
     Write-Host ''
-    Write-Host '   Turkcell Superonline kullaniyorsaniz "Superonline Ozel Mod" secilmelidir.'
-    Write-Host '   Turk Telekom veya diger ISS''lerde standart mod yeterli olabilir.'
+    Write-Host '   Turkcell Superonline veya diger altyapilarda baglanti sorunlarina karsi'
+    Write-Host '   farkli bypass modlarini deneyebilirsiniz.'
     Write-Host ''
-    Write-Host '   [1] Standart Mod (Turk Telekom, TurkNet, Kablonet vb.)'
+    Write-Host '   [1] Standart Mod (Turk Telekom, Superonline, TurkNet, Kablonet vb.) - Onerilen'
     Write-Host '       Parametre: --wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake --dpi-desync-fooling=md5sig'
     Write-Host ''
-    Write-Host '   [2] Superonline Ozel Mod (EN COK CALISAN - Varsayilan)'
+    Write-Host '   [2] Superonline Ozel Mod (Eski Yontem)'
     Write-Host '       Parametre: --wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig'
     Write-Host ''
-    Write-Host '   [3] Geri Don'
+    Write-Host '   [3] Otomatik Algila (Baglantiyi test ederek en iyi modu secer)'
+    Write-Host '   [4] Geri Don'
     Write-Host ''
 
-    $choice = Read-Host '   Seciminiz (1-3)'
-    if ($choice -eq '3' -or [string]::IsNullOrWhiteSpace($choice)) { return }
+    $choice = Read-Host '   Seciminiz (1-4)'
+    if ($choice -eq '4' -or [string]::IsNullOrWhiteSpace($choice)) { return }
 
     $presetName = ''
     $params = ''
@@ -809,6 +904,11 @@ function Invoke-ChangeMode {
         '2' {
             $presetName = 'Superonline Ozel Mod (Zapret)'
             $params = '--wf-tcp=80,443 --filter-tcp=80,443 --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig'
+        }
+        '3' {
+            $best = Find-BestPreset
+            $presetName = $best.Name
+            $params = $best.Params
         }
         default {
             Write-Host '   Gecersiz secim!' -ForegroundColor Red
