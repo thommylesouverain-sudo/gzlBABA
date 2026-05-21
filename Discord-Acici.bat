@@ -151,7 +151,7 @@ param(
 $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 
-$ScriptVersion = '1.0.2'
+$ScriptVersion = '1.0.3'
 $UpdateUrl = 'https://raw.githubusercontent.com/thommylesouverain-sudo/gzlBABA/main/Discord-Acici.bat'
 
 $hostsPath   = "$env:WINDIR\System32\drivers\etc\hosts"
@@ -163,13 +163,18 @@ $blacklistPath = Join-Path $installDir 'discord-blacklist.txt'
 
 $cfDomains = @(
     'discord.com', 'discordapp.com', 'discord.gg', 'discord.media',
-    'cdn.discordapp.com', 'media.discordapp.net',
-    'gateway.discord.gg', 'status.discord.com', 'updates.discord.com',
+    'status.discord.com', 'updates.discord.com',
     'router.discordapp.net', 'support.discord.com',
     'canary.discord.com', 'ptb.discord.com',
     'assets.discord.com', 'app.discord.com',
-    'images-ext-1.discordapp.net', 'images-ext-2.discordapp.net',
-    'latency.discord.media', 'discordstatus.com',
+    'latency.discord.media', 'discordstatus.com'
+)
+$gatewayDomains = @('gateway.discord.gg')
+$cdnDomains = @(
+    'cdn.discordapp.com', 'media.discordapp.net',
+    'images-ext-1.discordapp.net', 'images-ext-2.discordapp.net'
+)
+$dlDomains = @(
     'dl.discordapp.net', 'dl-builds.discordapp.net',
     'dl-canary.discordapp.net', 'dl-canary-builds.discordapp.net',
     'dl-ptb.discordapp.net', 'dl-ptb-builds.discordapp.net'
@@ -473,14 +478,24 @@ function Update-HostsFile {
     }
 
     Write-Host '  [Hosts] IP cozumleniyor (DoH)...' -ForegroundColor Cyan
-    $cfIp  = Resolve-PrimaryIp -Domain 'discord.com'                -DefaultIp '162.159.135.232'
-    $gcpIp = Resolve-PrimaryIp -Domain 'stable.dl2.discordapp.net'  -DefaultIp '34.107.221.82'
+    $cfIp      = Resolve-PrimaryIp -Domain 'discord.com'                -DefaultIp '162.159.137.232'
+    $gatewayIp = Resolve-PrimaryIp -Domain 'gateway.discord.gg'         -DefaultIp '162.159.135.234'
+    $cdnIp     = Resolve-PrimaryIp -Domain 'cdn.discordapp.com'         -DefaultIp '162.159.130.233'
+    $dlIp      = Resolve-PrimaryIp -Domain 'dl.discordapp.net'          -DefaultIp '104.18.48.115'
+    $gcpIp     = Resolve-PrimaryIp -Domain 'stable.dl2.discordapp.net'  -DefaultIp '34.126.226.51'
+
     Write-Host "          Cloudflare IP : $cfIp"  -ForegroundColor Green
+    Write-Host "          Gateway IP    : $gatewayIp" -ForegroundColor Green
+    Write-Host "          CDN IP        : $cdnIp"     -ForegroundColor Green
+    Write-Host "          Download IP   : $dlIp"      -ForegroundColor Green
     Write-Host "          GoogleCloud IP: $gcpIp" -ForegroundColor Green
 
     $entries = @()
-    foreach ($d in $cfDomains)  { $entries += [PSCustomObject]@{ IP = $cfIp;  Domain = $d } }
-    foreach ($d in $gcpDomains) { $entries += [PSCustomObject]@{ IP = $gcpIp; Domain = $d } }
+    foreach ($d in $cfDomains)      { $entries += [PSCustomObject]@{ IP = $cfIp;      Domain = $d } }
+    foreach ($d in $gatewayDomains) { $entries += [PSCustomObject]@{ IP = $gatewayIp; Domain = $d } }
+    foreach ($d in $cdnDomains)     { $entries += [PSCustomObject]@{ IP = $cdnIp;     Domain = $d } }
+    foreach ($d in $dlDomains)      { $entries += [PSCustomObject]@{ IP = $dlIp;      Domain = $d } }
+    foreach ($d in $gcpDomains)     { $entries += [PSCustomObject]@{ IP = $gcpIp;     Domain = $d } }
 
     Write-Host '  [Hosts] Yaziliyor...' -ForegroundColor Cyan
     $content = ''
