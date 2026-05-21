@@ -797,10 +797,11 @@ function Invoke-Update {
                 Write-Host '   Indiriliyor...' -ForegroundColor Cyan
                 $batPath = Join-Path $BatDir 'Discord-Acici.bat'
                 $enc = New-Object Text.UTF8Encoding $false
-                [IO.File]::WriteAllText($batPath, $remote, $enc)
+                $lines = $remote -split '\r?\n'
+                [IO.File]::WriteAllLines($batPath, $lines, $enc)
                 $sitePath = "$env:WINDIR\site.bat"
                 if (Test-Path $sitePath) {
-                    [IO.File]::WriteAllText($sitePath, $remote, $enc)
+                    [IO.File]::WriteAllLines($sitePath, $lines, $enc)
                 }
                 Write-Host '   [OK] Guncelleme tamamlandi! Programi yeniden baslatin.' -ForegroundColor Green
                 Show-WinNotification 'Discord Acici' "Surum $remoteVersion yuklendi!"
