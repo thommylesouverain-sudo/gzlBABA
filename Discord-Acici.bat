@@ -1,88 +1,88 @@
-@echo off
-chcp 65001 >nul
-title Discord Erisim Araci
-color 0B
-
-set "SCRIPT=%~f0"
-set "BATDIR=%~dp0"
-if "%BATDIR:~-1%"=="\" set "BATDIR=%BATDIR:~0,-1%"
-
-net session >nul 2>&1
-if %errorLevel% equ 0 goto IS_ADMIN
-
-echo.
-echo  Yonetici izni gerekiyor, yeniden baslatiliyor...
-set "PSARGS="
-:BUILD_ARGS
-set "A=%~1"
-if "%A%"=="" goto DO_ELEVATE
-if defined PSARGS (set "PSARGS=%PSARGS%,'%A%'") else (set "PSARGS='%A%'")
-shift /1
-goto BUILD_ARGS
-:DO_ELEVATE
-if defined PSARGS (
-    powershell -NoProfile -Command "Start-Process -FilePath '%SCRIPT%' -ArgumentList %PSARGS% -Verb RunAs"
-) else (
-    powershell -NoProfile -Command "Start-Process -FilePath '%SCRIPT%' -Verb RunAs"
-)
-exit /b
-
-:IS_ADMIN
-set "SCRIPTNAME=%~n0"
-
-if /i "%SCRIPTNAME%"=="site" if "%~1"=="" goto DO_SITE_USAGE
-if /i "%SCRIPTNAME%"=="gzlbaba" if "%~1"=="" goto MENU
-if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="reset" goto DO_RESET
-if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="sifirla" goto DO_RESET
-if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="ac" call :RUN_PS Open "" & pause & exit /b
-if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="durum" call :RUN_PS Status "" & pause & exit /b
-if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="status" call :RUN_PS Status "" & pause & exit /b
-if /i "%~1"=="ac"     goto SITE_CMD
-if /i "%~1"=="aç"     goto SITE_CMD
-if /i "%~1"=="add"    goto SITE_CMD
-if /i "%~1"=="ekle"   goto SITE_CMD
-if /i "%~1"=="kapat"  goto SITE_CMD
-if /i "%~1"=="remove" goto SITE_CMD
-if /i "%~1"=="sil"    goto SITE_CMD
-if /i "%~1"=="liste"  goto SITE_CMD
-if /i "%~1"=="list"   goto SITE_CMD
-if /i "%~1"=="sifirla" goto DO_RESET
-if /i "%~1"=="reset"   goto DO_RESET
-goto MENU
-
-:DO_RESET
-call :RUN_PS Restore ""
-pause
-exit /b
-
-:DO_SITE_USAGE
-call :RUN_PS SiteUsage ""
-pause
-exit /b
-
-:SITE_CMD
-set "SITECMD=%~1"
-shift /1
-set "DOMAINS="
-:COLLECT
-set "D=%~1"
-if "%D%"=="" goto ROUTE_SITE
-if defined DOMAINS (set "DOMAINS=%DOMAINS% %D%") else (set "DOMAINS=%D%")
-shift /1
-goto COLLECT
-:ROUTE_SITE
-set "ACTION=SiteList"
-if /i "%SITECMD%"=="ac"     set "ACTION=SiteAdd"
-if /i "%SITECMD%"=="aç"     set "ACTION=SiteAdd"
-if /i "%SITECMD%"=="add"    set "ACTION=SiteAdd"
-if /i "%SITECMD%"=="ekle"   set "ACTION=SiteAdd"
-if /i "%SITECMD%"=="kapat"  set "ACTION=SiteRemove"
-if /i "%SITECMD%"=="remove" set "ACTION=SiteRemove"
-if /i "%SITECMD%"=="sil"    set "ACTION=SiteRemove"
-if /i "%SITECMD%"=="liste"  set "ACTION=SiteList"
-if /i "%SITECMD%"=="list"   set "ACTION=SiteList"
-call :RUN_PS %ACTION% "%DOMAINS%"
-pause
+@echo off
+chcp 65001 >nul
+title Discord Erisim Araci
+color 0B
+
+set "SCRIPT=%~f0"
+set "BATDIR=%~dp0"
+if "%BATDIR:~-1%"=="\" set "BATDIR=%BATDIR:~0,-1%"
+
+net session >nul 2>&1
+if %errorLevel% equ 0 goto IS_ADMIN
+
+echo.
+echo  Yonetici izni gerekiyor, yeniden baslatiliyor...
+set "PSARGS="
+:BUILD_ARGS
+set "A=%~1"
+if "%A%"=="" goto DO_ELEVATE
+if defined PSARGS (set "PSARGS=%PSARGS%,'%A%'") else (set "PSARGS='%A%'")
+shift /1
+goto BUILD_ARGS
+:DO_ELEVATE
+if defined PSARGS (
+    powershell -NoProfile -Command "Start-Process -FilePath '%SCRIPT%' -ArgumentList %PSARGS% -Verb RunAs"
+) else (
+    powershell -NoProfile -Command "Start-Process -FilePath '%SCRIPT%' -Verb RunAs"
+)
+exit /b
+
+:IS_ADMIN
+set "SCRIPTNAME=%~n0"
+
+if /i "%SCRIPTNAME%"=="site" if "%~1"=="" goto DO_SITE_USAGE
+if /i "%SCRIPTNAME%"=="gzlbaba" if "%~1"=="" goto MENU
+if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="reset" goto DO_RESET
+if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="sifirla" goto DO_RESET
+if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="ac" call :RUN_PS Open "" & pause & exit /b
+if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="durum" call :RUN_PS Status "" & pause & exit /b
+if /i "%SCRIPTNAME%"=="gzlbaba" if /i "%~1"=="status" call :RUN_PS Status "" & pause & exit /b
+if /i "%~1"=="ac"     goto SITE_CMD
+if /i "%~1"=="aç"     goto SITE_CMD
+if /i "%~1"=="add"    goto SITE_CMD
+if /i "%~1"=="ekle"   goto SITE_CMD
+if /i "%~1"=="kapat"  goto SITE_CMD
+if /i "%~1"=="remove" goto SITE_CMD
+if /i "%~1"=="sil"    goto SITE_CMD
+if /i "%~1"=="liste"  goto SITE_CMD
+if /i "%~1"=="list"   goto SITE_CMD
+if /i "%~1"=="sifirla" goto DO_RESET
+if /i "%~1"=="reset"   goto DO_RESET
+goto MENU
+
+:DO_RESET
+call :RUN_PS Restore ""
+pause
+exit /b
+
+:DO_SITE_USAGE
+call :RUN_PS SiteUsage ""
+pause
+exit /b
+
+:SITE_CMD
+set "SITECMD=%~1"
+shift /1
+set "DOMAINS="
+:COLLECT
+set "D=%~1"
+if "%D%"=="" goto ROUTE_SITE
+if defined DOMAINS (set "DOMAINS=%DOMAINS% %D%") else (set "DOMAINS=%D%")
+shift /1
+goto COLLECT
+:ROUTE_SITE
+set "ACTION=SiteList"
+if /i "%SITECMD%"=="ac"     set "ACTION=SiteAdd"
+if /i "%SITECMD%"=="aç"     set "ACTION=SiteAdd"
+if /i "%SITECMD%"=="add"    set "ACTION=SiteAdd"
+if /i "%SITECMD%"=="ekle"   set "ACTION=SiteAdd"
+if /i "%SITECMD%"=="kapat"  set "ACTION=SiteRemove"
+if /i "%SITECMD%"=="remove" set "ACTION=SiteRemove"
+if /i "%SITECMD%"=="sil"    set "ACTION=SiteRemove"
+if /i "%SITECMD%"=="liste"  set "ACTION=SiteList"
+if /i "%SITECMD%"=="list"   set "ACTION=SiteList"
+call :RUN_PS %ACTION% "%DOMAINS%"
+pause
 exit /b
 :MENU
 cls
