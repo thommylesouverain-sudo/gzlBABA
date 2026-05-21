@@ -151,7 +151,7 @@ param(
 $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 
-$ScriptVersion = '1.0.3'
+$ScriptVersion = '1.0.4'
 $UpdateUrl = 'https://raw.githubusercontent.com/thommylesouverain-sudo/gzlBABA/main/Discord-Acici.bat'
 
 $hostsPath   = "$env:WINDIR\System32\drivers\etc\hosts"
@@ -841,7 +841,9 @@ function Invoke-Update {
 
     Write-Host '   Kontrol ediliyor...' -ForegroundColor Cyan
     try {
-        $remote = Invoke-RestMethod -Uri $UpdateUrl -TimeoutSec 10 -ErrorAction Stop
+        $cacheBuster = [DateTime]::UtcNow.Ticks
+        $urlWithBuster = $UpdateUrl + "?t=" + $cacheBuster
+        $remote = Invoke-RestMethod -Uri $urlWithBuster -TimeoutSec 10 -ErrorAction Stop
         $versionMatch = [regex]::Match($remote, "\`$ScriptVersion\s*=\s*'([^']+)'")
         if ($versionMatch.Success) {
             $remoteVersion = $versionMatch.Groups[1].Value
